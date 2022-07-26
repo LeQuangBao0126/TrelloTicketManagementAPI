@@ -16,7 +16,7 @@ connectDB()
 const bootServer = () => {
   const app = express()
 
-  app.use(cors(corsOptions))
+  app.use(cors())
 
   // Enable req.body data
   app.use(express.json())
@@ -30,6 +30,6 @@ const bootServer = () => {
 
   // Support heroku deploy
   app.listen(process.env.PORT || env.APP_PORT, () => {
-    console.log(`Hello trungquandev, I'm running at port: ${process.env.PORT || env.APP_PORT}/`)
+    console.log(`Hello Bao how to , I'm running at port: ${process.env.PORT || env.APP_PORT}/`)
   })
 }

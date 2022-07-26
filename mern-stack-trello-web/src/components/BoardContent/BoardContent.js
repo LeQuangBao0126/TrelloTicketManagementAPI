@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { flushSync } from 'react-dom'
-import { Container, Draggable } from 'react-smooth-dnd'
+import { Container } from 'react-smooth-dnd'
 import {
   Container as BootstrapContainer,
   Row, Col, Form, Button
@@ -8,15 +8,15 @@ import {
 import { isEmpty, cloneDeep } from 'lodash'
 
 import './BoardContent.scss'
-import Column from 'components/Column/Column'
+import ListColumns from 'components/ListColumns/ListColumns'
 import { mapOrder } from 'utilities/sorts'
 import { applyDrag } from 'utilities/dragDrop'
 import {
-  fetchBoardDetails,
-  createNewColumn,
-  updateBoard,
-  updateColumn,
-  updateCard
+  fetchBoardDetailsAPI,
+  createNewColumnAPI,
+  updateBoardAPI,
+  updateColumnAPI,
+  updateCardAPI
 } from 'actions/ApiCall'
 
 function BoardContent() {
@@ -33,8 +33,8 @@ function BoardContent() {
   useEffect(() => {
     // Sửa boardId ở đây chuẩn với id mà các em tạo trên Cloud MongoDB.
     // (các buổi học sau chúng ta sẽ làm chuẩn hơn việc lấy boardId từ URL, cứ yên tâm)
-    const boardId = '6097c4807dd4c732fb392af1'
-    fetchBoardDetails(boardId).then(board => {
+    const boardId = '62dba82023259021b187d4cb'
+    fetchBoardDetailsAPI(boardId).then(board => {
       setBoard(board)
       setColumns(mapOrder(board.columns, board.columnOrder, '_id'))
     })
@@ -52,53 +52,69 @@ function BoardContent() {
   }
 
   const onColumnDrop = (dropResult) => {
-    let newColumns = cloneDeep(columns)
+    const originalColumns = cloneDeep(columns)
+    let newColumns =  [...columns]
     newColumns = applyDrag(newColumns, dropResult)
 
-    let newBoard = cloneDeep(board)
+    const originalBoard = cloneDeep(board)
+    let newBoard =  {...board}
     newBoard.columnOrder = newColumns.map(c => c._id)
     newBoard.columns = newColumns
 
     setColumns(newColumns)
     setBoard(newBoard)
     // Call api update columnOrder in board details.
-    updateBoard(newBoard._id, newBoard).catch(() => {
-      setColumns(columns)
-      setBoard(board)
+    updateBoardAPI(newBoard._id, newBoard).catch(() => {
+      setColumns(originalColumns)
+      setBoard(originalBoard)
     })
   }
 
   const onCardDrop = (columnId, dropResult) => {
+    console.log('a')
     if (dropResult.removedIndex !== null || dropResult.addedIndex !== null) {
-      let newColumns = cloneDeep(columns)
+      const originalColumns = cloneDeep(columns)
+      let newColumns =  [...columns]
 
       let currentColumn = newColumns.find(c => c._id === columnId)
       currentColumn.cards = applyDrag(currentColumn.cards, dropResult)
       currentColumn.cardOrder = currentColumn.cards.map(i => i._id)
+
+      const originalBoard = cloneDeep(board)
+      let newBoard =  {...board}
+      newBoard.columnOrder = newColumns.map(c => c._id)
+      newBoard.columns = newColumns
 
       /**
        * Automatic batching for fewer renders in React 18
        * https://github.com/reactwg/react-18/discussions/21
        */
       flushSync(() => setColumns(newColumns))
+      flushSync(() => setBoard(newBoard))
       if (dropResult.removedIndex !== null && dropResult.addedIndex !== null) {
         /**
          * Action: move card inside its column
          * 1 - Call api update cardOrder in current column
          */
-        updateColumn(currentColumn._id, currentColumn).catch(() => setColumns(columns))
+        updateColumnAPI(currentColumn._id, currentColumn).catch(() => {
+          flushSync(setColumns(originalColumns)) 
+          flushSync(setBoard(newBoard))
+        })
       } else {
         /**
          * Action: Move card beetween two columns
          */
         // 1 - Call api update cardOrder in current column
-        updateColumn(currentColumn._id, currentColumn).catch(() => setColumns(columns))
+        updateColumnAPI(currentColumn._id, currentColumn).catch(() => {
+          flushSync(setColumns(originalColumns)) 
+          flushSync(setBoard(newBoard))
+        })
 
         if (dropResult.addedIndex !== null) {
           let currentCard = cloneDeep(dropResult.payload)
           currentCard.columnId = currentColumn._id
           // 2 - Call api update columnId in current card
-          updateCard(currentCard._id, currentCard)
+          updateCardAPI(currentCard._id, currentCard)
         }
       }
     }
@@ -115,7 +131,7 @@ function BoardContent() {
       title: newColumnTitle.trim()
     }
     // Call API
-    createNewColumn(newColumnToAdd).then(column => {
+    createNewColumnAPI(newColumnToAdd).then(column => {
       let newColumns = [...columns]
       newColumns.push(column)
 
@@ -165,15 +181,11 @@ function BoardContent() {
           className: 'column-drop-preview'
         }}
       >
-        {columns.map((column, index) => (
-          <Draggable key={index}>
-            <Column
-              column={column}
-              onCardDrop={onCardDrop}
-              onUpdateColumnState={onUpdateColumnState}
-            />
-          </Draggable>
-        ))}
+        <ListColumns
+           columns={columns}
+           onCardDrop={onCardDrop}
+           onUpdateColumnState={onUpdateColumnState}
+        /> 
       </Container>
 
       <BootstrapContainer className="trungquandev-trello-container">

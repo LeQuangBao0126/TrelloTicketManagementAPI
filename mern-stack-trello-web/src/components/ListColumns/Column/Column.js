@@ -4,12 +4,12 @@ import { Dropdown, Form, Button } from 'react-bootstrap'
 import { cloneDeep } from 'lodash'
 
 import './Column.scss'
-import Card from 'components/Card/Card'
 import ConfirmModal from 'components/Common/ConfirmModal'
 import { mapOrder } from 'utilities/sorts'
 import { MODAL_ACTION_CONFIRM } from 'utilities/constants'
 import { saveContentAfterPressEnter, selectAllInlineText } from 'utilities/contentEditable'
-import { createNewCard, updateColumn } from 'actions/ApiCall'
+import { createNewCardAPI, updateColumnAPI } from 'actions/ApiCall'
+import ListCard from 'components/ListCard/ListCard'
 
 function Column(props) {
   const { column, onCardDrop, onUpdateColumnState } = props
@@ -48,7 +48,7 @@ function Column(props) {
         _destroy: true
       }
       // Call api update column
-      updateColumn(newColumn._id, newColumn).then(updatedColumn => {
+      updateColumnAPI(newColumn._id, newColumn).then(updatedColumn => {
         onUpdateColumnState(updatedColumn)
       })
     }
@@ -63,7 +63,7 @@ function Column(props) {
         title: columnTitle
       }
       // Call api update column
-      updateColumn(newColumn._id, newColumn).then(updatedColumn => {
+      updateColumnAPI(newColumn._id, newColumn).then(updatedColumn => {
         updatedColumn.cards = newColumn.cards
         onUpdateColumnState(updatedColumn)
       })
@@ -82,7 +82,7 @@ function Column(props) {
       title: newCardTitle.trim()
     }
     // Call API
-    createNewCard(newCardToAdd).then(card => {
+    createNewCardAPI(newCardToAdd).then(card => {
       let newColumn = cloneDeep(column)
       newColumn.cards.push(card)
       newColumn.cardOrder.push(card._id)
@@ -146,11 +146,9 @@ function Column(props) {
           }}
           dropPlaceholderAnimationDuration={200}
         >
-          {cards.map((card, index) => (
-            <Draggable key={index}>
-              <Card card={card} />
-            </Draggable>
-          ))}
+          <ListCard
+            cards= {cards}
+          /> 
         </Container>
         {openNewCardForm &&
           <div className="add-new-card-area">
@@ -194,4 +192,4 @@ function Column(props) {
   )
 }
 
-export default Column
+export default React.memo(Column) 
