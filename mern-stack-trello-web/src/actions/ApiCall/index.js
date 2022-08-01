@@ -6,10 +6,10 @@ export const updateBoardAPI = async (id, data) => {
   return request.data
 }
 
-export const fetchBoardDetailsAPI = async (id) => {
-  const request = await axios.get(`${API_ROOT}/v1/boards/${id}`)
-  return request.data
-}
+// export const fetchBoardDetailsAPI = async (id) => {
+//   const request = await axios.get(`${API_ROOT}/v1/boards/${id}`)
+//   return request.data
+// }
 
 export const createNewColumnAPI = async (data) => {
   const request = await axios.post(`${API_ROOT}/v1/columns`, data)

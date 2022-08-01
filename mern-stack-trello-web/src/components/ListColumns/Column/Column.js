@@ -5,7 +5,7 @@ import { cloneDeep } from 'lodash'
 
 import './Column.scss'
 import ConfirmModal from 'components/Common/ConfirmModal'
-import { mapOrder } from 'utilities/sorts'
+
 import { MODAL_ACTION_CONFIRM } from 'utilities/constants'
 import { saveContentAfterPressEnter, selectAllInlineText } from 'utilities/contentEditable'
 import { createNewCardAPI, updateColumnAPI } from 'actions/ApiCall'
@@ -13,7 +13,7 @@ import ListCard from 'components/ListCard/ListCard'
 
 function Column(props) {
   const { column, onCardDrop, onUpdateColumnState } = props
-  const cards = mapOrder(column.cards, column.cardOrder, '_id')
+  const cards = column.cards  
 
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const toggleShowConfirmModal = () => setShowConfirmModal(!showConfirmModal)

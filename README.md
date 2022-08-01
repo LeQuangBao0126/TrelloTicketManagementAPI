@@ -1,2 +1,5 @@
 # TrelloTicketManagement
 TrelloTicketManagement
+
+
+Redux config .
