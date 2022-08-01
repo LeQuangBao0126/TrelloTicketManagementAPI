@@ -12,15 +12,22 @@ import ListColumns from 'components/ListColumns/ListColumns'
 import { mapOrder } from 'utilities/sorts'
 import { applyDrag } from 'utilities/dragDrop'
 import {
-  fetchBoardDetailsAPI,
+  // fetchBoardDetailsAPI,
   createNewColumnAPI,
   updateBoardAPI,
   updateColumnAPI,
   updateCardAPI
 } from 'actions/ApiCall'
 
+import { useSelector , useDispatch } from 'react-redux'
+import {fetchFullBoardDetailsAPI ,selectCurrentFullBoard,
+  updateCurrentFullBoard
+} from 'redux/activeBoard/activeBoardSlice'
+
 function BoardContent() {
-  const [board, setBoard] = useState({})
+  const dispatch = useDispatch()
+  const board = useSelector(selectCurrentFullBoard)
+  
   const [columns, setColumns] = useState([])
   const [openNewColumnForm, setOpenNewColumnForm] = useState(false)
   const toggleOpenNewColumnForm = () => setOpenNewColumnForm(!openNewColumnForm)
@@ -32,13 +39,17 @@ function BoardContent() {
 
   useEffect(() => {
     // Sửa boardId ở đây chuẩn với id mà các em tạo trên Cloud MongoDB.
-    // (các buổi học sau chúng ta sẽ làm chuẩn hơn việc lấy boardId từ URL, cứ yên tâm)
     const boardId = '62dba82023259021b187d4cb'
-    fetchBoardDetailsAPI(boardId).then(board => {
-      setBoard(board)
-      setColumns(mapOrder(board.columns, board.columnOrder, '_id'))
-    })
-  }, [])
+    dispatch(fetchFullBoardDetailsAPI(boardId))
+
+  }, [dispatch])
+
+  useEffect(() => {
+    if (board) {
+        setColumns(board.columns)
+    }
+  }, [board])
+  
 
   useEffect(() => {
     if (newColumnInputRef && newColumnInputRef.current) {
@@ -62,43 +73,52 @@ function BoardContent() {
     newBoard.columns = newColumns
 
     setColumns(newColumns)
-    setBoard(newBoard)
+    dispatch(updateCurrentFullBoard(newBoard))
     // Call api update columnOrder in board details.
     updateBoardAPI(newBoard._id, newBoard).catch(() => {
       setColumns(originalColumns)
-      setBoard(originalBoard)
+      dispatch(updateCurrentFullBoard(originalBoard))
     })
   }
 
   const onCardDrop = (columnId, dropResult) => {
-    console.log('a')
     if (dropResult.removedIndex !== null || dropResult.addedIndex !== null) {
       const originalColumns = cloneDeep(columns)
       let newColumns =  [...columns]
 
       let currentColumn = newColumns.find(c => c._id === columnId)
-      currentColumn.cards = applyDrag(currentColumn.cards, dropResult)
-      currentColumn.cardOrder = currentColumn.cards.map(i => i._id)
-
+      if(!currentColumn) return 
+      const newCards =  applyDrag(currentColumn.cards, dropResult)
+      const newCardOrder = newCards.map(i => i._id)
+     
       const originalBoard = cloneDeep(board)
       let newBoard =  {...board}
       newBoard.columnOrder = newColumns.map(c => c._id)
       newBoard.columns = newColumns
+
+      currentColumn = {
+        ...currentColumn , 
+        cards: newCards,
+        cardOrder : newCardOrder
+      }
+
+      const currentColumnIndex = newColumns.findIndex(c =>c._id === columnId)
+      newColumns.splice( currentColumnIndex, 1 , currentColumn )
 
       /**
        * Automatic batching for fewer renders in React 18
        * https://github.com/reactwg/react-18/discussions/21
        */
       flushSync(() => setColumns(newColumns))
-      flushSync(() => setBoard(newBoard))
+      flushSync(()=> dispatch(updateCurrentFullBoard(newBoard)))
       if (dropResult.removedIndex !== null && dropResult.addedIndex !== null) {
         /**
          * Action: move card inside its column
          * 1 - Call api update cardOrder in current column
          */
         updateColumnAPI(currentColumn._id, currentColumn).catch(() => {
-          flushSync(setColumns(originalColumns)) 
-          flushSync(setBoard(newBoard))
+          flushSync(()=>setColumns(originalColumns)) 
+          flushSync(()=>dispatch(updateCurrentFullBoard(originalBoard)))
         })
       } else {
         /**
@@ -106,8 +126,8 @@ function BoardContent() {
          */
         // 1 - Call api update cardOrder in current column
         updateColumnAPI(currentColumn._id, currentColumn).catch(() => {
-          flushSync(setColumns(originalColumns)) 
-          flushSync(setBoard(newBoard))
+          flushSync(() => setColumns(originalColumns) ) 
+          flushSync(()=> dispatch(updateCurrentFullBoard(originalBoard)))
         })
 
         if (dropResult.addedIndex !== null) {
@@ -135,12 +155,13 @@ function BoardContent() {
       let newColumns = [...columns]
       newColumns.push(column)
 
-      let newBoard = { ...board }
+      const originalBoard = cloneDeep(board)
+      let newBoard =  {...board}
       newBoard.columnOrder = newColumns.map(c => c._id)
       newBoard.columns = newColumns
 
       setColumns(newColumns)
-      setBoard(newBoard)
+      dispatch(updateCurrentFullBoard(originalBoard))
       setNewColumnTitle('')
       toggleOpenNewColumnForm()
     })
@@ -160,12 +181,13 @@ function BoardContent() {
       newColumns.splice(columnIndexToUpdate, 1, newColumnToUpdate)
     }
 
-    let newBoard = { ...board }
+    const originalBoard = cloneDeep(board)
+    let newBoard =  {...board}
     newBoard.columnOrder = newColumns.map(c => c._id)
     newBoard.columns = newColumns
 
     setColumns(newColumns)
-    setBoard(newBoard)
+    dispatch(updateCurrentFullBoard(originalBoard))
   }
 
   return (
