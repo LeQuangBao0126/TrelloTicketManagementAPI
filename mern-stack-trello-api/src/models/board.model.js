@@ -9,10 +9,12 @@ const boardCollectionName = 'boards'
 const boardCollectionSchema = Joi.object({
   title: Joi.string().required().min(3).max(20).trim(),
   columnOrder: Joi.array().items(Joi.string()).default([]),
-  createdAt: Joi.date().timestamp().default(Date.now()),
+  createdAt: Joi.date().timestamp('javascript').default(Date.now),
   updatedAt: Joi.date().timestamp().default(null),
   _destroy: Joi.boolean().default(false)
 })
+
+const ALLOW_UPDATE_FIELDS = ['title', 'description', 'ownerIds', 'memberIds', 'columnOrder', 'updatedAt', '_destroy']
 
 const validateSchema = async (data) => {
   return await boardCollectionSchema.validateAsync(data, { abortEarly: false })
@@ -40,6 +42,12 @@ const createNew = async (data) => {
 const update = async (id, data) => {
   try {
     const updateData = { ...data }
+
+    //Quan trọng. for qua để lọc loại key ko mún update
+    Object.keys(updateData).forEach(key => {
+      if(!ALLOW_UPDATE_FIELDS.includes(key)) delete updateData[key]
+    })
+
     const result = await getDB().collection(boardCollectionName).findOneAndUpdate(
       { _id: ObjectId(id) },
       { $set: updateData },
