@@ -40,7 +40,7 @@ function BoardContent() {
   useEffect(() => {
     // Sửa boardId ở đây chuẩn với id mà các em tạo trên Cloud MongoDB.
     const boardId = '62dba82023259021b187d4cb'
-    dispatch(fetchFullBoardDetailsAPI(boardId))
+    dispatch(fetchFullBoardDetailsAPI(boardId)).then(()=> { console.log('tắt')})
 
   }, [dispatch])
 
@@ -73,7 +73,8 @@ function BoardContent() {
     newBoard.columns = newColumns
 
     setColumns(newColumns)
-    dispatch(updateCurrentFullBoard(newBoard))
+    dispatch(updateCurrentFullBoard(newBoard))  // sửa đổi trong store trước (dispatch bất đồng bộ trong store) , rồi update api .Giảm Độ trễ của request
+    // Nếu có lỗi catch thì trả về vị trí cũ 
     // Call api update columnOrder in board details.
     updateBoardAPI(newBoard._id, newBoard).catch(() => {
       setColumns(originalColumns)
